@@ -16,7 +16,8 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-var unsafeHostnameCharacters = regexp.MustCompile(`[^a-zA-Z0-9-\.]`)
+var unsafeHostnameCharacters = regexp.MustCompile(`[^a-zA-Z0-9-\.\*]`)
+var subdomainPattern = regexp.MustCompile(`^[^.]+\.`)
 
 type certProvider interface {
 	// TLSConfig creates a new TLS config suitable for net/http.Server servers.
@@ -89,7 +90,7 @@ func (m *manualCertManager) TLSConfig() *tls.Config {
 }
 
 func (m *manualCertManager) getCertificate(hi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if hi.ServerName != m.hostname {
+	if hi.ServerName != m.hostname && (m.hostname[:2] != "*." || subdomainPattern.ReplaceAllString(hi.ServerName, "") != m.hostname[2:]) {
 		return nil, fmt.Errorf("cert mismatch with hostname: %q", hi.ServerName)
 	}
 
